@@ -119,7 +119,7 @@ class LoginHistory(PkMixin, CreateTimeMixin, table=True):
 
     __tablename__ = "auth_login_history"
 
-    user_id: Optional[int] = Field(None, title=_("User ID"), sa_column_args=(ForeignKey("auth_user.id", ondelete="CASCADE"),))
+    user_id: Optional[int] = Field(None, title=_("User ID"))
     login_name: str = Field("", title=_("Login Name"), max_length=20)
     ip: str = Field("", title=_("Login IP"), max_length=20)
     ip_info: str = Field("", title=_("IP Information"), max_length=255)
