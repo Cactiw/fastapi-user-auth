@@ -27,6 +27,7 @@ from fastapi_amis_admin.amis.components import (
 from fastapi_amis_admin.amis.constants import DisplayModeEnum, LevelEnum
 from fastapi_amis_admin.crud.base import SchemaUpdateT
 from fastapi_amis_admin.crud.schema import BaseApiOut
+from fastapi_amis_admin.utils.pydantic import model_fields
 from fastapi_amis_admin.utils.translation import i18n as _
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -240,8 +241,8 @@ class UserInfoFormAdmin(FormAdmin):
         form = await super().get_form(request)
         formitems = [
             await self.get_form_item(request, modelfield)
-            for k, modelfield in self.user_model.__fields__.items()
-            if k not in self.schema.__fields__.keys() | {"delete_time"}
+            for k, modelfield in model_fields(self.user_model).items()
+            if k not in model_fields(self.schema).keys() | {"delete_time"}
         ]
         form.body.extend(formitem.update_from_kwargs(disabled=True) for formitem in formitems if formitem)
         return form
@@ -251,10 +252,9 @@ class UserInfoFormAdmin(FormAdmin):
             if k == "password":
                 if not v:
                     continue
-                else:
-                    v = request.auth.pwd_context.hash(v)  # 密码hash保存
+                v = request.auth.get_password_hash(v)
             setattr(request.user, k, v)
-        return BaseApiOut(data=self.schema_submit_out.parse_obj(request.user))
+        return BaseApiOut(data=request.user.dict(exclude={"password"}))
 
     async def has_page_permission(self, request: Request, obj: PageSchemaAdmin = None, action: str = None) -> bool:
         return await self.site.auth.requires(response=False)(request)
@@ -266,7 +266,7 @@ class UserAdmin(AuthFieldModelAdmin, AuthSelectModelAdmin, SoftDeleteModelAdmin,
     model: Type[BaseUser] = None
     exclude = ["password"]
     ordering = [User.id.desc()]
-    search_fields = [User.username, UserRoleNameLabel]
+    search_fields = [User.username]
     update_exclude = AutoTimeModelAdmin.update_exclude | {"username"}
     display_item_action_as_column = True
     admin_action_maker = [
@@ -291,7 +291,6 @@ class UserAdmin(AuthFieldModelAdmin, AuthSelectModelAdmin, SoftDeleteModelAdmin,
         User.nickname,
         User.email,
         User.is_active,
-        UserRoleNameLabel,
         User.create_time,
     ]
     perm_fields_exclude = {
@@ -307,20 +306,15 @@ class UserAdmin(AuthFieldModelAdmin, AuthSelectModelAdmin, SoftDeleteModelAdmin,
         ],
     }
 
-    async def get_select(self, request: Request) -> Select:
-        sel = await super().get_select(request)
-        sel = sel.outerjoin(CasbinSubjectRolesQuery, CasbinSubjectRolesQuery.c.subject == "u:" + User.username)
-        return sel
-
     async def on_create_pre(self, request: Request, obj, **kwargs) -> Dict[str, Any]:
         data = await super(UserAdmin, self).on_create_pre(request, obj, **kwargs)
-        data["password"] = request.auth.pwd_context.hash(data["password"])  # 密码hash保存
+        data["password"] = request.auth.get_password_hash(data["password"])
         return data
 
     async def on_update_pre(self, request: Request, obj, item_id: List[int], **kwargs) -> Dict[str, Any]:
         data = await super(UserAdmin, self).on_update_pre(request, obj, item_id, **kwargs)
-        if data.get("password"):
-            data["password"] = request.auth.pwd_context.hash(data["password"])  # 密码hash保存
+        if data.get("password", None):
+            data["password"] = request.auth.get_password_hash(data["password"])
         return data
 
 

@@ -10,8 +10,8 @@ from fastapi_amis_admin.amis.constants import LevelEnum
 from fastapi_amis_admin.crud.schema import BaseApiOut
 from fastapi_amis_admin.models import Field
 from fastapi_amis_admin.utils.translation import i18n as _
+from fastapi_amis_admin.utils.pydantic import ModelField
 from pydantic import BaseModel
-from pydantic.fields import ModelField
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
@@ -125,7 +125,7 @@ class UpdateSubRolesAction(BaseSubAction):
 
     class schema(BaseModel):
         role_keys: str = Field(
-            None,
+            "",
             title=_("Role List"),
             amis_form_item=amis.Transfer(
                 selectMode="table",
@@ -199,7 +199,7 @@ class BaseSubPermAction(BaseSubAction):
     # 创建动作表单数据模型
     class schema(BaseModel):
         permissions: str = Field(
-            None,
+            "",
             title=_("Permission List"),
             amis_form_item=amis.InputTree(
                 multiple=True,
@@ -281,7 +281,7 @@ class UpdateSubDataPermAction(BaseSubPermAction):
     # 创建动作表单数据模型
     class schema(BaseSubPermAction.schema):
         effect_matrix: list = Field(
-            None,
+            [],
             title=_("Current Permissions"),
             amis_form_item=amis.MatrixCheckboxes(
                 rowLabel=_("Permission Name"),
@@ -292,7 +292,7 @@ class UpdateSubDataPermAction(BaseSubPermAction):
             ),
         )
         policy_matrix: list = Field(
-            None,
+            [],
             title=_("Permission Configuration"),
             amis_form_item=amis.MatrixCheckboxes(
                 rowLabel=_("Name"),
