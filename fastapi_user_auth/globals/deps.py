@@ -16,7 +16,7 @@ CurrentUserOrNone: Optional[g.UserModel] = Annotated[Optional[g.UserModel], Depe
 def get_user_or_error(user: CurrentUserOrNone):
     """获取当前登录用户,如果未登录则抛出异常"""
     if not user:
-        raise AuthError(status=ErrorCode.USER_IS_NOT_LOGIN, msg=_("User not logged in"))
+        raise AuthError(status=ErrorCode.USER_IS_NOT_LOGIN, msg=_("User not logged in"), status_code=401)
     return user
 
 
